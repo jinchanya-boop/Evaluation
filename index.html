@@ -1260,7 +1260,7 @@
         // รอสักครู่แล้วใช้ html2canvas
         setTimeout(() => {
             html2canvas(reportDiv, {
-                scale: 1.2,
+                scale: 1.2, /* ลด scale กลับมาที่เหมาะสม */
                 useCORS: true,
                 allowTaint: true,
                 backgroundColor: '#ffffff',
@@ -1275,10 +1275,10 @@
                 
                 const imgData = canvas.toDataURL('image/png', 0.9);
                 
-                // ขยับทางซ้ายเล็กน้อย
-                const imgWidth = 185;
-                const imgHeight = 255;
-                const offsetX = 8; /* ลดจาก 12.5 เป็น 8 */
+                // ใส่รูปภาพให้สมดุลระหว่างขนาดและการแสดงผล
+                const imgWidth = 185; /* ปรับขนาดให้สมดุล */
+                const imgHeight = 255; /* ปรับตาม ratio */
+                const offsetX = 12.5; /* จัดกึ่งกลาง */
                 const offsetY = 15; 
                 
                 doc.addImage(imgData, 'PNG', offsetX, offsetY, imgWidth, imgHeight);
