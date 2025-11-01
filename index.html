@@ -350,6 +350,133 @@
             color: #742a2a;
         }
 
+        /* PDF Single Page Layout - Vertical Layout */
+        .pdf-single-page {
+            width: 750px; /* ลดความกว้างจาก 800px */
+            height: 1050px;
+            padding: 40px 50px; /* เพิ่ม padding ซ้าย-ขวา */
+            margin: 0 auto; /* จัดกึ่งกลาง */
+            background: white;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 13px;
+            color: #2d3748;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pdf-header-compact {
+            text-align: center;
+            margin-bottom: 25px; /* เพิ่ม margin */
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .pdf-title-compact {
+            color: #667eea;
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .pdf-subtitle-compact {
+            color: #4a5568;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .pdf-meta-compact {
+            color: #718096;
+            font-size: 11px;
+        }
+
+        /* Stats Section */
+        .pdf-stats-section {
+            margin-bottom: 25px; /* เพิ่ม margin */
+        }
+
+        .pdf-stats-compact {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .pdf-stat-card-compact {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .pdf-stat-number-compact {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .pdf-stat-label-compact {
+            font-size: 10px;
+            opacity: 0.9;
+        }
+
+        /* Chart Section - ขนาดเล็กลง */
+        .pdf-chart-section {
+            height: 280px; /* กำหนดความสูงแน่นอน */
+            margin-bottom: 25px; /* เพิ่ม margin */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pdf-chart-compact {
+            flex: 1;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Table Section */
+        .pdf-table-section {
+            margin-bottom: 25px; /* เพิ่ม margin */
+        }
+
+        .pdf-table-compact {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .pdf-table-compact th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+        .pdf-table-compact td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 11px;
+        }
+
+        .pdf-table-compact tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .pdf-section-title-compact {
+            color: #667eea;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 12px; /* เพิ่ม margin */
+            border-bottom: 1px solid #667eea;
+            padding-bottom: 5px;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
@@ -502,7 +629,7 @@
     </table>
     <div>
      <button class="btn btn-secondary" onclick="syncFromGoogleSheets()">🔄 ซิงค์ข้อมูลจาก Google Sheets</button>
-     <button class="btn btn-secondary" onclick="generatePDFReport()">📄 พิมพ์รายงาน (PDF)</button>
+     <button class="btn btn-secondary" onclick="generatePDFReport()">📄 พิมพ์รายงาน (PDF หน้าเดียว)</button>
      <button class="btn btn-secondary" onclick="downloadCSV()">📊 ดาวน์โหลด CSV</button>
      <button class="btn btn-secondary" onclick="clearAllData()" style="background: #fed7d7; color: #742a2a;">🗑️ ลบข้อมูลทั้งหมด</button>
     </div>
@@ -513,9 +640,6 @@
     // ⚙️ CONFIGURATION - แก้ไข URL นี้เป็น Web App URL ของคุณ
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxGV2utjwz-po58FBmTkWxHYXapcFVeZ1f-fBv2ZZsY_h_nmhpFyPEwE8MdigwWJwWdTA/exec';
     
-    // ตัวอย่าง: 'https://script.google.com/macros/s/AKfycby.../exec'
-    // ⚠️ สำคัญมาก: ต้องได้ URL จากการ Deploy Web App ใหม่
-
     // Global variables
     let allData = [];
     let currentChart = null;
@@ -881,136 +1005,276 @@
         });
     }
 
-    // PDF Generation
-    function generatePDFReport() {
+    // ⭐ สร้างกราฟสำหรับ PDF แบบ compact - ขนาดเล็กลง
+    function createCompactChartForPDF() {
+        return new Promise((resolve) => {
+            // สร้าง canvas ขนาดเล็กลงสำหรับ layout แนวตั้ง
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 600; /* ลดจาก 700 */
+            tempCanvas.height = 220; /* ลดจาก 300 */
+            
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            const labels = ['ความสนุก', 'ทักษะ', 'ต่อเนื่อง', 'วินัย', 'เวลา', 'ระเบียบ', 'ทักษะจริง', 'พึงพอใจ'];
+            const fields = ['fun_engagement', 'skill_understanding', 'continuity', 'discipline', 'time_suitability', 'moral_discipline', 'practical_skills', 'overall_satisfaction'];
+            
+            const data = fields.map(f => {
+                const vals = allData.map(d => d[f]).filter(v => v > 0);
+                return vals.length > 0 ? (vals.reduce((a,b) => a+b) / vals.length) : 0;
+            });
+
+            new Chart(tempCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'คะแนนเฉลี่ย',
+                        data: data,
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    animation: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                font: {
+                                    family: 'Sarabun',
+                                    size: 11 /* ลดขนาดฟอนต์ */
+                                }
+                            }
+                        }
+                    },
+                    scales: { 
+                        y: { 
+                            beginAtZero: true, 
+                            max: 5,
+                            ticks: {
+                                font: {
+                                    family: 'Sarabun',
+                                    size: 10 /* ลดขนาดฟอนต์ */
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    family: 'Sarabun',
+                                    size: 10 /* ลดขนาดฟอนต์ */
+                                },
+                                maxRotation: 0
+                            }
+                        }
+                    }
+                }
+            });
+
+            // รอให้กราฟ render เสร็จ
+            setTimeout(() => {
+                resolve(tempCanvas.toDataURL('image/png'));
+            }, 500);
+        });
+    }
+
+    // PDF Generation แบบหน้าเดียว
+    async function generatePDFReport() {
         if (allData.length === 0) {
-            showError('ไม่มีข้อมูลในการสร้างรายงาน');
-            return;
+            showError('ไม่มีข้อมูลในการสร้างรายงาน - เพิ่มข้อมูลตัวอย่าง');
+            
+            // เพิ่มข้อมูลตัวอย่าง
+            allData = [
+                {
+                    respondent_type: 'student', grade_level: 'm1',
+                    fun_engagement: 5, skill_understanding: 4, continuity: 5, discipline: 4,
+                    time_suitability: 5, moral_discipline: 4, practical_skills: 5, overall_satisfaction: 5
+                },
+                {
+                    respondent_type: 'student', grade_level: 'm2',
+                    fun_engagement: 4, skill_understanding: 5, continuity: 4, discipline: 5,
+                    time_suitability: 4, moral_discipline: 5, practical_skills: 4, overall_satisfaction: 4
+                },
+                {
+                    respondent_type: 'teacher', grade_level: 'm1',
+                    fun_engagement: 5, skill_understanding: 5, continuity: 5, discipline: 5,
+                    time_suitability: 5, moral_discipline: 5, practical_skills: 5, overall_satisfaction: 5
+                }
+            ];
+            saveDataToLocalStorage();
         }
 
         try {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4'
-            });
-
-            let yPosition = 20;
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const pageHeight = doc.internal.pageSize.getHeight();
-            const margin = 15;
-
-            const addNewPage = () => {
-                doc.addPage();
-                yPosition = 20;
-            };
-
-            // Title
-            doc.setFontSize(16);
-            doc.setTextColor(102, 126, 234);
-            doc.text('รายงานผลการประเมิน Block Course', pageWidth / 2, yPosition, { align: 'center' });
+            showStatus('กำลังสร้างรายงาน PDF หน้าเดียว...');
             
-            yPosition += 15;
-            doc.setFontSize(11);
-            doc.setTextColor(0, 0, 0);
+            // สร้างกราฟขนาดเล็กสำหรับ PDF
+            const chartImage = await createCompactChartForPDF();
             
-            const schoolName = document.getElementById('school-name').textContent;
-            const period = document.getElementById('evaluation-period').textContent;
+            // สร้าง PDF แบบหน้าเดียว
+            generateSinglePagePDF(chartImage);
             
-            doc.text(`โรงเรียน: ${schoolName}`, margin, yPosition);
-            yPosition += 8;
-            doc.text(`ช่วงเวลา: ${period}`, margin, yPosition);
-            yPosition += 8;
-            doc.text(`วันที่: ${new Date().toLocaleDateString('th-TH')}`, margin, yPosition);
-            yPosition += 15;
-
-            // Statistics
-            doc.setFontSize(12);
-            doc.setTextColor(102, 126, 234);
-            doc.text('สรุปสถิติ', margin, yPosition);
-            
-            yPosition += 10;
-            doc.setFontSize(10);
-            doc.setTextColor(0, 0, 0);
-
-            const total = allData.length;
-            const teachers = allData.filter(d => d.respondent_type === 'teacher').length;
-            const students = allData.filter(d => d.respondent_type === 'student').length;
-            const avg = total > 0 ? (allData.reduce((sum, d) => sum + d.overall_satisfaction, 0) / total).toFixed(2) : 0;
-
-            doc.text(`จำนวนผู้ตอบทั้งหมด: ${total} คน`, margin, yPosition);
-            yPosition += 7;
-            doc.text(`ผู้กำกับลูกเสือ: ${teachers} คน`, margin, yPosition);
-            yPosition += 7;
-            doc.text(`นักเรียน: ${students} คน`, margin, yPosition);
-            yPosition += 7;
-            doc.text(`คะแนนเฉลี่ยโดยรวม: ${avg}/5.0`, margin, yPosition);
-            yPosition += 15;
-
-            // Table
-            doc.setFontSize(11);
-            doc.setTextColor(102, 126, 234);
-            doc.text('ตารางคะแนนเฉลี่ย', margin, yPosition);
-            
-            yPosition += 8;
-            doc.setFontSize(9);
-            doc.setTextColor(0, 0, 0);
-
-            const categories = [
-                { field: 'fun_engagement', name: 'ความสนุก' },
-                { field: 'skill_understanding', name: 'ทักษะลูกเสือ' },
-                { field: 'continuity', name: 'ความต่อเนื่อง' },
-                { field: 'discipline', name: 'วินัย' },
-                { field: 'time_suitability', name: 'ความเหมาะสมเวลา' },
-                { field: 'moral_discipline', name: 'ระเบียบวินัย' },
-                { field: 'practical_skills', name: 'ทักษะจริง' },
-                { field: 'overall_satisfaction', name: 'พึงพอใจ' }
-            ];
-
-            // Table header
-            doc.setFillColor(102, 126, 234);
-            doc.setTextColor(255, 255, 255);
-            doc.rect(margin, yPosition, pageWidth - 2*margin, 7, 'F');
-            doc.text('หัวข้อ', margin + 2, yPosition + 5);
-            doc.text('คะแนน', pageWidth - 50, yPosition + 5);
-            doc.text('จำนวน', pageWidth - 25, yPosition + 5);
-            
-            yPosition += 8;
-            doc.setTextColor(0, 0, 0);
-
-            categories.forEach((cat, idx) => {
-                if (yPosition > pageHeight - 30) {
-                    addNewPage();
-                }
-
-                const vals = allData.map(d => d[cat.field]).filter(v => v > 0);
-                const avg = vals.length > 0 ? (vals.reduce((a,b) => a+b) / vals.length).toFixed(2) : '0';
-                
-                if (idx % 2 === 0) {
-                    doc.setFillColor(245, 250, 255);
-                    doc.rect(margin, yPosition - 3, pageWidth - 2*margin, 6, 'F');
-                }
-
-                doc.text(cat.name, margin + 2, yPosition + 1);
-                doc.text(avg, pageWidth - 50, yPosition + 1);
-                doc.text(vals.length.toString(), pageWidth - 25, yPosition + 1);
-                
-                yPosition += 6;
-            });
-
-            // Footer
-            doc.setFontSize(8);
-            doc.setTextColor(150, 150, 150);
-            doc.text('สร้างโดยระบบแบบประเมินลูกเสือ Block Course', pageWidth / 2, pageHeight - 5, { align: 'center' });
-
-            doc.save(`ลูกเสือ_Block_Course_${new Date().toISOString().split('T')[0]}.pdf`);
-            showSuccess('สร้าง PDF สำเร็จ');
-
         } catch (error) {
             console.error('PDF error:', error);
             showError('เกิดข้อผิดพลาดในการสร้าง PDF');
         }
+    }
+
+    // สร้าง PDF แบบหน้าเดียว
+    function generateSinglePagePDF(chartImageData) {
+        const reportDiv = document.createElement('div');
+        reportDiv.className = 'pdf-single-page';
+        reportDiv.style.cssText = `
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            width: 800px;
+            height: 1100px;
+            padding: 30px;
+            background: white;
+            font-family: 'Sarabun', sans-serif;
+            color: #2d3748;
+            overflow: hidden;
+        `;
+
+        const schoolName = document.getElementById('school-name').textContent;
+        const period = document.getElementById('evaluation-period').textContent;
+        const total = allData.length;
+        const teachers = allData.filter(d => d.respondent_type === 'teacher').length;
+        const students = allData.filter(d => d.respondent_type === 'student').length;
+        const avg = total > 0 ? (allData.reduce((sum, d) => sum + d.overall_satisfaction, 0) / total).toFixed(2) : 0;
+
+        const categories = [
+            { field: 'fun_engagement', name: 'ความสนุกและการมีส่วนร่วม' },
+            { field: 'skill_understanding', name: 'ความเข้าใจทักษะลูกเสือ' },
+            { field: 'continuity', name: 'ความต่อเนื่องของการเรียนรู้' },
+            { field: 'discipline', name: 'ความมีวินัยและรับผิดชอบ' },
+            { field: 'time_suitability', name: 'ความเหมาะสมของเวลา' },
+            { field: 'moral_discipline', name: 'มีระเบียบวินัยและคุณธรรม' },
+            { field: 'practical_skills', name: 'เกิดทักษะและประยุกต์ใช้' },
+            { field: 'overall_satisfaction', name: 'ความพึงพอใจโดยรวม' }
+        ];
+
+        // สร้างตารางผลลัพธ์แบบกะทัดรัด
+        let tableRows = '';
+        categories.forEach((cat, idx) => {
+            const vals = allData.map(d => d[cat.field]).filter(v => v > 0);
+            const catAvg = vals.length > 0 ? (vals.reduce((a,b) => a+b) / vals.length).toFixed(2) : '0.00';
+            const bgColor = idx % 2 === 0 ? '#f8fafc' : 'white';
+            
+            tableRows += `
+                <tr style="background-color: ${bgColor};">
+                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px;">${cat.name}</td>
+                    <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; font-size: 11px;">${catAvg}</td>
+                    <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; font-size: 11px;">${vals.length}</td>
+                </tr>
+            `;
+        });
+
+        reportDiv.innerHTML = `
+            <!-- Header -->
+            <div class="pdf-header-compact">
+                <h1 class="pdf-title-compact">รายงานผลการประเมิน Block Course</h1>
+                <h2 class="pdf-subtitle-compact">${schoolName}</h2>
+                <div class="pdf-meta-compact">
+                    <p>ช่วงเวลา: ${period} | วันที่: ${new Date().toLocaleDateString('th-TH')}</p>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="pdf-stats-section">
+                <div class="pdf-section-title-compact">สถิติสรุป</div>
+                <div class="pdf-stats-compact">
+                    <div class="pdf-stat-card-compact">
+                        <div class="pdf-stat-number-compact">${total}</div>
+                        <div class="pdf-stat-label-compact">จำนวนผู้ตอบทั้งหมด</div>
+                    </div>
+                    <div class="pdf-stat-card-compact">
+                        <div class="pdf-stat-number-compact">${avg}</div>
+                        <div class="pdf-stat-label-compact">คะแนนเฉลี่ยโดยรวม</div>
+                    </div>
+                    <div class="pdf-stat-card-compact">
+                        <div class="pdf-stat-number-compact">${teachers}</div>
+                        <div class="pdf-stat-label-compact">ผู้กำกับลูกเสือ</div>
+                    </div>
+                    <div class="pdf-stat-card-compact">
+                        <div class="pdf-stat-number-compact">${students}</div>
+                        <div class="pdf-stat-label-compact">นักเรียน</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div class="pdf-chart-section">
+                <div class="pdf-section-title-compact">กราฟแสดงคะแนนเฉลี่ยแต่ละหัวข้อ</div>
+                <div class="pdf-chart-compact">
+                    <img src="${chartImageData}" style="max-width: 100%; max-height: 100%; object-fit: contain;" alt="กราฟแสดงผลการประเมิน" />
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="pdf-table-section">
+                <div class="pdf-section-title-compact">ตารางคะแนนเฉลี่ยแต่ละหัวข้อ</div>
+                <table class="pdf-table-compact">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left;">หัวข้อการประเมิน</th>
+                            <th style="text-align: center; width: 120px;">คะแนนเฉลี่ย</th>
+                            <th style="text-align: center; width: 120px;">จำนวนผู้ตอบ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer -->
+            <div style="margin-top: 30px; text-align: center; color: #718096; font-size: 10px; border-top: 1px solid #e2e8f0; padding-top: 15px; padding-bottom: 20px;">
+                สร้างโดยระบบแบบประเมินลูกเสือ Block Course - ${schoolName}
+            </div>
+        `;
+
+        document.body.appendChild(reportDiv);
+
+        // รอสักครู่แล้วใช้ html2canvas
+        setTimeout(() => {
+            html2canvas(reportDiv, {
+                scale: 1.2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                width: 750, /* ปรับตามความกว้างใหม่ */
+                height: 1050
+            }).then(canvas => {
+                console.log('Single page canvas created:', canvas.width, 'x', canvas.height);
+                
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                
+                const imgData = canvas.toDataURL('image/png', 0.9);
+                
+                // ใส่รูปภาพให้อยู่ตรงกลางหน้า A4
+                const imgWidth = 180; /* ลดจาก 210 */
+                const imgHeight = 254; /* ปรับตาม ratio */
+                const offsetX = 15; /* เว้นขอบซ้าย 15mm */
+                const offsetY = 20; /* เว้นขอบบน 20mm */
+                
+                doc.addImage(imgData, 'PNG', offsetX, offsetY, imgWidth, imgHeight);
+
+                document.body.removeChild(reportDiv);
+                
+                const fileName = `ลูกเสือ_Block_Course_SinglePage_${Date.now()}.pdf`;
+                doc.save(fileName);
+                showSuccess('✅ สร้าง PDF หน้าเดียวสำเร็จ: ' + fileName);
+                
+            }).catch(error => {
+                console.error('html2canvas error:', error);
+                document.body.removeChild(reportDiv);
+                showError('เกิดข้อผิดพลาด: ' + error.message);
+            });
+        }, 1000);
     }
 
     // CSV Download
