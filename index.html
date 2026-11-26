@@ -260,6 +260,24 @@
             margin: 30px 0;
         }
 
+        /* 📅 เลือกช่วงประเมิน + เปรียบเทียบรายปี */
+        .period-bar {
+            display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+            background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 12px;
+            padding: 12px 16px; margin-bottom: 20px;
+        }
+        .period-bar label { font-weight: 600; color: #4c1d95; }
+        .period-bar select {
+            font-family: inherit; font-size: 16px; padding: 8px 12px;
+            border: 2px solid #c4b5fd; border-radius: 10px; background: white; min-width: 260px;
+        }
+        .period-note { font-size: 13px; color: #6b7280; }
+        .compare-section { margin-top: 40px; padding-top: 24px; border-top: 2px dashed #ddd6fe; }
+        .compare-section .chart-container { height: 360px; }
+        .diff-up { color: #15803d; font-weight: 700; }
+        .diff-down { color: #b91c1c; font-weight: 700; }
+        .diff-same { color: #6b7280; }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -529,7 +547,7 @@
     </div>
     <h1 class="main-title" id="system-title">ระบบแบบประเมินกิจกรรมการเรียนการสอนลูกเสือ แบบ Block Course</h1>
     <p class="subtitle" id="school-name">โรงเรียนสา</p>
-    <p class="period">ช่วงเวลาประเมิน: <span id="evaluation-period">30 ต.ค. – 1 พ.ย. 2568</span></p>
+    <p class="period">ช่วงเวลาประเมิน: <span id="evaluation-period">Block Course ภาคเรียนที่ 2/2569 (26–27 พ.ย. 2569)</span></p>
    </div>
    <div class="tabs">
     <div class="tab active" onclick="showTab(event, 'evaluation')">
@@ -552,7 +570,7 @@
       <div class="form-group">
        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 15px; text-align: center;">
         <h3 style="font-size: 20px; margin-bottom: 10px; font-weight: bold;">การประเมินการเรียนการสอนแบบ Block Course</h3>
-        <p style="font-size: 16px; margin: 0; opacity: 0.9;">การเรียนการสอนแบบเข้มข้น 3 วันติดต่อกัน เน้นการปฏิบัติจริงและการเรียนรู้แบบเชื่อมโยง</p>
+        <p style="font-size: 16px; margin: 0; opacity: 0.9;">การเรียนการสอนแบบเข้มข้นต่อเนื่องหลายวัน เน้นการปฏิบัติจริงและการเรียนรู้แบบเชื่อมโยง</p>
        </div>
       </div>
      </div>
@@ -615,6 +633,11 @@
 
    <!-- ผลการประเมิน -->
    <div id="results-tab" class="content hidden">
+    <div class="period-bar">
+     <label for="period-select">📅 ดูผลของ:</label>
+     <select id="period-select" onchange="refreshResults()"></select>
+     <span class="period-note" id="period-note"></span>
+    </div>
     <div class="stats-grid">
      <div class="stat-card">
       <div class="stat-number" id="total-responses">0</div>
@@ -651,7 +674,17 @@
      <button class="btn btn-secondary" onclick="syncFromGoogleSheets()">🔄 ซิงค์ข้อมูลจาก Google Sheets</button>
      <button class="btn btn-secondary" onclick="generatePDFReport()">📄 พิมพ์รายงาน (PDF หน้าเดียว)</button>
      <button class="btn btn-secondary" onclick="downloadCSV()">📊 ดาวน์โหลด CSV</button>
-     <button class="btn btn-secondary" onclick="clearAllData()" style="background: #fed7d7; color: #742a2a;">🗑️ ลบข้อมูลทั้งหมด</button>
+     <button class="btn btn-secondary" onclick="clearAllData()" style="background: #fed7d7; color: #742a2a;">🧹 ล้างข้อมูลที่จำไว้ในเครื่องนี้</button>
+    </div>
+
+    <!-- 📈 เปรียบเทียบรายปี -->
+    <div class="compare-section">
+     <h3 class="section-title">📈 เปรียบเทียบผลการประเมินแต่ละปี</h3>
+     <p class="period-note">แยกอัตโนมัติจากวันที่ตอบแบบประเมิน (ภาคเรียนที่ 1 = พ.ค.–ก.ย. · ภาคเรียนที่ 2 = ต.ค.–เม.ย.) · ข้อมูลเก่าทุกปียังอยู่ครบใน Google Sheet</p>
+     <div class="chart-container"><canvas id="compare-chart" aria-label="กราฟเปรียบเทียบคะแนนเฉลี่ยแต่ละปี" role="img"></canvas></div>
+     <div style="overflow-x:auto">
+      <table class="comparison-table" id="compare-table"></table>
+     </div>
     </div>
    </div>
   </div>
@@ -674,6 +707,126 @@
         practical_skills: 0,
         overall_satisfaction: 0
     };
+
+    // ==========================================================
+    // 📅 แยกข้อมูลตาม "ปีการศึกษา / ภาคเรียน" จากวันที่ตอบ (ไม่ต้องลบข้อมูลเก่า)
+    // ภาคเรียนที่ 1 = พ.ค.–ก.ย. · ภาคเรียนที่ 2 = ต.ค.–เม.ย. (ม.ค.–เม.ย. นับเป็นปีการศึกษาก่อนหน้า)
+    // ==========================================================
+    const CRITERIA = [
+        { field: 'fun_engagement', name: 'ความสนุกและการมีส่วนร่วม', short: 'ความสนุก' },
+        { field: 'skill_understanding', name: 'ความเข้าใจทักษะลูกเสือ', short: 'ทักษะ' },
+        { field: 'continuity', name: 'ความต่อเนื่องของการเรียนรู้', short: 'ต่อเนื่อง' },
+        { field: 'discipline', name: 'ความมีวินัยและรับผิดชอบ', short: 'วินัย' },
+        { field: 'time_suitability', name: 'ความเหมาะสมของเวลา', short: 'เวลา' },
+        { field: 'moral_discipline', name: 'มีระเบียบวินัยและคุณธรรม', short: 'ระเบียบ' },
+        { field: 'practical_skills', name: 'เกิดทักษะและประยุกต์ใช้', short: 'ทักษะจริง' },
+        { field: 'overall_satisfaction', name: 'ความพึงพอใจโดยรวม', short: 'พึงพอใจ' }
+    ];
+    function periodOfDate(dt) {
+        if (!(dt instanceof Date) || isNaN(dt)) return null;
+        const m = dt.getMonth() + 1, be = dt.getFullYear() + 543;
+        const year = m >= 5 ? be : be - 1;
+        const term = (m >= 5 && m <= 9) ? 1 : 2;
+        return { year, term, key: `${year}/${term}` };
+    }
+    function periodOf(d) {
+        return periodOfDate(new Date(d.timestamp)) || { year: 0, term: 0, key: 'unknown' };
+    }
+    const periodLabel = key => key === 'all' ? 'ทุกปี (รวมทั้งหมด)' : key === 'unknown' ? 'ไม่ทราบวันที่' : `ภาคเรียนที่ ${key.split('/')[1]}/${key.split('/')[0]}`;
+    const CURRENT_PERIOD = periodOfDate(new Date()).key;
+    function periodKeys() {
+        const keys = new Set(allData.map(d => periodOf(d).key));
+        keys.add(CURRENT_PERIOD);
+        return [...keys].filter(k => k !== 'unknown').sort((a, b) => {
+            const [ya, ta] = a.split('/').map(Number), [yb, tb] = b.split('/').map(Number);
+            return ya - yb || ta - tb;
+        }).concat(keys.has('unknown') ? ['unknown'] : []);
+    }
+    function selectedPeriod() {
+        const sel = document.getElementById('period-select');
+        return (sel && sel.value) || CURRENT_PERIOD;
+    }
+    // ข้อมูลที่กำลังดู (ตามช่วงที่เลือก)
+    function viewData() {
+        const p = selectedPeriod();
+        return p === 'all' ? allData : allData.filter(d => periodOf(d).key === p);
+    }
+    const avgOf = (rows, field) => {
+        const vals = rows.map(d => d[field]).filter(v => v > 0);
+        return { avg: vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0, n: vals.length };
+    };
+    function renderPeriodSelect() {
+        const sel = document.getElementById('period-select');
+        if (!sel) return;
+        const prev = sel.value || CURRENT_PERIOD;
+        const keys = periodKeys();
+        sel.innerHTML = keys.slice().reverse().map(k => {
+            const n = allData.filter(d => periodOf(d).key === k).length;
+            return `<option value="${k}">${periodLabel(k)}${k === CURRENT_PERIOD ? ' (ปัจจุบัน)' : ''} — ${n} คน</option>`;
+        }).join('') + `<option value="all">${periodLabel('all')} — ${allData.length} คน</option>`;
+        sel.value = [...sel.options].some(o => o.value === prev) ? prev : CURRENT_PERIOD;
+        const note = document.getElementById('period-note');
+        if (note) note.textContent = sel.value === CURRENT_PERIOD ? 'ผู้ตอบใหม่จะถูกนับในช่วงนี้อัตโนมัติ' : 'กำลังดูข้อมูลย้อนหลัง';
+    }
+    function refreshResults() {
+        renderPeriodSelect();
+        updateStatistics();
+        updateChart();
+        updateResultsTable();
+        renderYearComparison();
+    }
+
+    // 📈 กราฟ + ตารางเปรียบเทียบแต่ละปี
+    let compareChart = null;
+    function renderYearComparison() {
+        const table = document.getElementById('compare-table');
+        const canvas = document.getElementById('compare-chart');
+        if (!table || !canvas) return;
+        const keys = periodKeys().filter(k => k !== 'unknown' && allData.some(d => periodOf(d).key === k));
+        if (compareChart) { compareChart.destroy(); compareChart = null; }
+        if (keys.length === 0) {
+            table.innerHTML = '<tr><td>ยังไม่มีข้อมูล</td></tr>';
+            return;
+        }
+        const groups = keys.map(k => allData.filter(d => periodOf(d).key === k));
+        const palette = ['#c4b5fd', '#8b5cf6', '#5b21b6', '#2a78d6', '#1baf7a', '#eb6834'];
+        compareChart = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: CRITERIA.map(c => c.short),
+                datasets: keys.map((k, i) => ({
+                    label: periodLabel(k) + ` (${groups[i].length} คน)`,
+                    data: CRITERIA.map(c => Number(avgOf(groups[i], c.field).avg.toFixed(2))),
+                    backgroundColor: palette[i % palette.length],
+                    borderRadius: 4
+                }))
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, max: 5 } },
+                plugins: { tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y.toFixed(2)}` } } }
+            }
+        });
+        const last = keys.length - 1;
+        const diffCell = (a, b) => {
+            if (!a || !b) return '<td class="diff-same">—</td>';
+            const d = a - b;
+            if (Math.abs(d) < 0.005) return '<td class="diff-same">เท่าเดิม</td>';
+            return d > 0 ? `<td class="diff-up">▲ +${d.toFixed(2)}</td>` : `<td class="diff-down">▼ ${d.toFixed(2)}</td>`;
+        };
+        let html = '<thead><tr><th style="text-align:left">หัวข้อการประเมิน</th>' +
+            keys.map((k, i) => `<th>${periodLabel(k)}<br><span style="font-weight:400;font-size:13px">${groups[i].length} คน</span></th>`).join('') +
+            (keys.length > 1 ? '<th>เปลี่ยนแปลง<br><span style="font-weight:400;font-size:13px">(ล่าสุด เทียบ ครั้งก่อน)</span></th>' : '') + '</tr></thead><tbody>';
+        CRITERIA.forEach(c => {
+            const avgs = groups.map(g => avgOf(g, c.field).avg);
+            html += `<tr><td style="text-align:left">${c.name}</td>` + avgs.map(a => `<td>${a ? a.toFixed(2) : '-'}</td>`).join('') +
+                (keys.length > 1 ? diffCell(avgs[last], avgs[last - 1]) : '') + '</tr>';
+        });
+        const tAvg = groups.map(g => { const v = CRITERIA.map(c => avgOf(g, c.field).avg).filter(x => x > 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0; });
+        html += `<tr style="font-weight:700;background:#f5f3ff"><td style="text-align:left">เฉลี่ยทุกหัวข้อ</td>` + tAvg.map(a => `<td>${a ? a.toFixed(2) : '-'}</td>`).join('') +
+            (keys.length > 1 ? diffCell(tAvg[last], tAvg[last - 1]) : '') + '</tr></tbody>';
+        table.innerHTML = html;
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
         initializeStarRatings();
@@ -798,9 +951,7 @@
                 saveDataToLocalStorage();
                 
                 // อัพเดทหน้าจอ
-                updateStatistics();
-                updateChart();
-                updateResultsTable();
+                refreshResults();
                 
                 showSuccess('ซิงค์ข้อมูลสำเร็จ: ' + allData.length + ' รายการ');
             } else {
@@ -949,18 +1100,17 @@
         document.getElementById('results-tab').classList.toggle('hidden', tabName !== 'results');
 
         if (tabName === 'results') {
-            updateStatistics();
-            updateChart();
-            updateResultsTable();
+            refreshResults();
         }
     }
 
     // Statistics
     function updateStatistics() {
-        const total = allData.length;
-        const teachers = allData.filter(d => d.respondent_type === 'teacher').length;
-        const students = allData.filter(d => d.respondent_type === 'student').length;
-        const avg = total > 0 ? (allData.reduce((sum, d) => sum + d.overall_satisfaction, 0) / total).toFixed(1) : 0;
+        const rows = viewData();
+        const total = rows.length;
+        const teachers = rows.filter(d => d.respondent_type === 'teacher').length;
+        const students = rows.filter(d => d.respondent_type === 'student').length;
+        const avg = total > 0 ? (rows.reduce((sum, d) => sum + d.overall_satisfaction, 0) / total).toFixed(1) : 0;
 
         document.getElementById('total-responses').textContent = total;
         document.getElementById('teacher-responses').textContent = teachers;
@@ -975,8 +1125,9 @@
         const labels = ['ความสนุก', 'ทักษะ', 'ต่อเนื่อง', 'วินัย', 'เวลา', 'ระเบียบ', 'ทักษะจริง', 'พึงพอใจ'];
         const fields = ['fun_engagement', 'skill_understanding', 'continuity', 'discipline', 'time_suitability', 'moral_discipline', 'practical_skills', 'overall_satisfaction'];
         
+        const rows = viewData();
         const data = fields.map(f => {
-            const vals = allData.map(d => d[f]).filter(v => v > 0);
+            const vals = rows.map(d => d[f]).filter(v => v > 0);
             return vals.length > 0 ? (vals.reduce((a,b) => a+b) / vals.length) : 0;
         });
 
@@ -1015,10 +1166,11 @@
             { field: 'overall_satisfaction', name: 'ความพึงพอใจโดยรวม' }
         ];
 
+        const rows = viewData();
         categories.forEach(cat => {
-            const vals = allData.map(d => d[cat.field]).filter(v => v > 0);
+            const vals = rows.map(d => d[cat.field]).filter(v => v > 0);
             const avg = vals.length > 0 ? (vals.reduce((a,b) => a+b) / vals.length).toFixed(2) : 0;
-            
+
             const row = document.createElement('tr');
             row.innerHTML = `<td style="text-align:left">${cat.name}</td><td>${avg}</td><td>${vals.length}</td>`;
             tbody.appendChild(row);
@@ -1038,8 +1190,9 @@
             const labels = ['ความสนุก', 'ทักษะ', 'ต่อเนื่อง', 'วินัย', 'เวลา', 'ระเบียบ', 'ทักษะจริง', 'พึงพอใจ'];
             const fields = ['fun_engagement', 'skill_understanding', 'continuity', 'discipline', 'time_suitability', 'moral_discipline', 'practical_skills', 'overall_satisfaction'];
             
+            const rows = viewData();
             const data = fields.map(f => {
-                const vals = allData.map(d => d[f]).filter(v => v > 0);
+                const vals = rows.map(d => d[f]).filter(v => v > 0);
                 return vals.length > 0 ? (vals.reduce((a,b) => a+b) / vals.length) : 0;
             });
 
@@ -1101,28 +1254,10 @@
 
     // PDF Generation แบบหน้าเดียว
     async function generatePDFReport() {
-        if (allData.length === 0) {
-            showError('ไม่มีข้อมูลในการสร้างรายงาน - เพิ่มข้อมูลตัวอย่าง');
-            
-            // เพิ่มข้อมูลตัวอย่าง
-            allData = [
-                {
-                    respondent_type: 'student', grade_level: 'm1',
-                    fun_engagement: 5, skill_understanding: 4, continuity: 5, discipline: 4,
-                    time_suitability: 5, moral_discipline: 4, practical_skills: 5, overall_satisfaction: 5
-                },
-                {
-                    respondent_type: 'student', grade_level: 'm2',
-                    fun_engagement: 4, skill_understanding: 5, continuity: 4, discipline: 5,
-                    time_suitability: 4, moral_discipline: 5, practical_skills: 4, overall_satisfaction: 4
-                },
-                {
-                    respondent_type: 'teacher', grade_level: 'm1',
-                    fun_engagement: 5, skill_understanding: 5, continuity: 5, discipline: 5,
-                    time_suitability: 5, moral_discipline: 5, practical_skills: 5, overall_satisfaction: 5
-                }
-            ];
-            saveDataToLocalStorage();
+        // (เดิมจะใส่ "ข้อมูลตัวอย่าง" ปลอมลงไปเมื่อไม่มีข้อมูล — เอาออก เพื่อไม่ให้ปนกับข้อมูลจริง)
+        if (viewData().length === 0) {
+            showError('ไม่มีข้อมูลใน' + periodLabel(selectedPeriod()) + ' สำหรับสร้างรายงาน');
+            return;
         }
 
         try {
@@ -1158,11 +1293,12 @@
         `;
 
         const schoolName = document.getElementById('school-name').textContent;
-        const period = document.getElementById('evaluation-period').textContent;
-        const total = allData.length;
-        const teachers = allData.filter(d => d.respondent_type === 'teacher').length;
-        const students = allData.filter(d => d.respondent_type === 'student').length;
-        const avg = total > 0 ? (allData.reduce((sum, d) => sum + d.overall_satisfaction, 0) / total).toFixed(2) : 0;
+        const rows = viewData();
+        const period = periodLabel(selectedPeriod());
+        const total = rows.length;
+        const teachers = rows.filter(d => d.respondent_type === 'teacher').length;
+        const students = rows.filter(d => d.respondent_type === 'student').length;
+        const avg = total > 0 ? (rows.reduce((sum, d) => sum + d.overall_satisfaction, 0) / total).toFixed(2) : 0;
 
         const categories = [
             { field: 'fun_engagement', name: 'ความสนุกและการมีส่วนร่วม' },
@@ -1178,7 +1314,7 @@
         // สร้างตารางผลลัพธ์แบบกะทัดรัด
         let tableRows = '';
         categories.forEach((cat, idx) => {
-            const vals = allData.map(d => d[cat.field]).filter(v => v > 0);
+            const vals = rows.map(d => d[cat.field]).filter(v => v > 0);
             const catAvg = vals.length > 0 ? (vals.reduce((a,b) => a+b) / vals.length).toFixed(2) : '0.00';
             const bgColor = idx % 2 === 0 ? '#f8fafc' : 'white';
             
@@ -1285,7 +1421,7 @@
 
                 document.body.removeChild(reportDiv);
                 
-                const fileName = `ลูกเสือ_Block_Course_SinglePage_${Date.now()}.pdf`;
+                const fileName = `ผลประเมิน_Block_Course_${selectedPeriod().replace('/', '-')}_${Date.now()}.pdf`;
                 doc.save(fileName);
                 showSuccess('✅ สร้าง PDF หน้าเดียวสำเร็จ: ' + fileName);
                 
@@ -1299,14 +1435,17 @@
 
     // CSV Download
     function downloadCSV() {
-        if (allData.length === 0) {
+        const view = viewData();
+        if (view.length === 0) {
             showError('ไม่มีข้อมูล');
             return;
         }
 
-        const headers = ['Timestamp', 'Type', 'Grade', 'Fun', 'Skill', 'Continuity', 'Discipline', 'Time', 'Moral', 'Practical', 'Satisfaction'];
-        const rows = allData.map(d => [
+        const q = v => `"${String(v === undefined || v === null ? '' : v).replace(/"/g, '""')}"`;
+        const headers = ['Timestamp', 'AcademicYear/Term', 'Type', 'Grade', 'Fun', 'Skill', 'Continuity', 'Discipline', 'Time', 'Moral', 'Practical', 'Satisfaction', 'Advantages', 'Improvements', 'Comments'];
+        const rows = view.map(d => [
             d.timestamp,
+            periodOf(d).key,
             d.respondent_type,
             d.grade_level,
             d.fun_engagement,
@@ -1316,30 +1455,31 @@
             d.time_suitability,
             d.moral_discipline,
             d.practical_skills,
-            d.overall_satisfaction
+            d.overall_satisfaction,
+            d.block_advantages,
+            d.block_improvements,
+            d.general_comments
         ]);
 
-        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const csv = [headers.join(','), ...rows.map(r => r.map(q).join(','))].join('\n');
         const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `ลูกเสือ_${new Date().toISOString().split('T')[0]}.csv`;
+        link.download = `ผลประเมิน_${selectedPeriod().replace('/', '-')}_${new Date().toISOString().split('T')[0]}.csv`;
         link.click();
         URL.revokeObjectURL(url);
     }
 
     // Clear All Data
     function clearAllData() {
-        if (confirm('⚠️ คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลทั้งหมด?\n\nข้อมูลใน LocalStorage จะถูกลบ (ข้อมูลใน Google Sheets จะไม่ถูกลบ)\n\nการลบไม่สามารถยกเลิกได้')) {
+        if (confirm('ล้างข้อมูลที่จำไว้ในเครื่องนี้?\n\nข้อมูลใน Google Sheets (ทุกปี) จะไม่ถูกลบ — กด "ซิงค์ข้อมูล" เพื่อโหลดกลับมาได้เสมอ')) {
             try {
                 allData = [];
                 localStorage.removeItem('scoutEvaluationData');
                 console.log('All local data cleared');
-                
-                updateStatistics();
-                updateChart();
-                updateResultsTable();
+
+                refreshResults();
                 
                 showSuccess('✅ ลบข้อมูลในเครื่องเรียบร้อยแล้ว');
             } catch (error) {
